@@ -1,0 +1,54 @@
+SELECT 
+       equipment_status_trans.shift_date, 
+       equipment_status_trans.shift_ident, 
+       equipment_status_trans.equip_ident, 
+       haul_cycle_trans.load_location_sname, 
+       haul_cycle_trans.dump_location_sname, 
+       haul_cycle_trans.material_ident, 
+       equipment_status_trans.status_code, 
+       equip_status_code.status_desc, 
+       equipment_status_trans.sub_status_code, 
+       equip_sub_status_code.sub_status_desc, 
+       Sum(Cast(equipment_status_trans.end_timestamp - 
+                    equipment_status_trans.start_timestamp AS 
+                    FLOAT) * 24 * 60) AS DURATIONMINUTES, 
+					
+		crew.descrip			
+FROM   equipment_status_trans 
+       LEFT JOIN haul_unit_status_trans_col 
+              ON equipment_status_trans.equip_status_rec_ident = 
+                 haul_unit_status_trans_col.equip_status_rec_ident 
+       LEFT JOIN haul_cycle_trans 
+              ON haul_unit_status_trans_col.haul_cycle_rec_ident = 
+                 haul_cycle_trans.haul_cycle_rec_ident 
+       LEFT JOIN equip_status_code 
+              ON equipment_status_trans.status_code = 
+                 equip_status_code.status_code 
+       LEFT JOIN equip_sub_status_code 
+              ON equip_status_code.status_code = 
+                 equip_sub_status_code.status_code 
+                 AND equipment_status_trans.sub_status_code = 
+                     equip_sub_status_code.sub_status_code 
+		 INNER JOIN shift 
+               ON equipment_status_trans.shift_ident = shift.shift_ident 
+       INNER JOIN crew 
+                  INNER JOIN roster 
+                          ON crew.crew_ident = roster.crew_ident 
+               ON equipment_status_trans.shift_ident = roster.shift_ident 
+                  AND equipment_status_trans.shift_date = roster.shift_date				 	 
+WHERE  equipment_status_trans.start_timestamp >= ? 
+       AND equipment_status_trans.start_timestamp <= ? 
+       AND LEFT(equipment_status_trans.equip_ident, 2) = 'DT' 
+	   
+GROUP  BY equipment_status_trans.shift_date, 
+          equipment_status_trans.shift_ident, 
+		  crew.descrip,
+          equipment_status_trans.equip_ident, 
+          equipment_status_trans.status_code, 
+          equipment_status_trans.sub_status_code, 
+          haul_cycle_trans.load_location_sname, 
+          haul_cycle_trans.material_ident, 
+          haul_cycle_trans.dump_location_sname, 
+          equip_status_code.status_desc, 
+          equip_sub_status_code.sub_status_desc 
+ORDER  BY equipment_status_trans.equip_ident ASC 
